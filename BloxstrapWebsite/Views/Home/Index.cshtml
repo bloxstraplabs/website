@@ -1,4 +1,6 @@
-﻿<div class="container mx-auto">
+﻿@model IndexViewModel;
+
+<div class="container mx-auto">
     <div class="flex h-screen">
         <div class="my-auto p-8">
             <div class="grid grid-cols-1 lg:grid-cols-2">
@@ -8,19 +10,19 @@
                     <div class="group relative w-fit mb-2 mx-auto lg:mx-0">
                         <!-- https://tailwindflex.com/@@prashant/glowing-gradient-border -->
                         <div class="absolute -inset-1 rounded-lg bg-gradient-to-tr from-fuchsia-600 to-indigo-600 opacity-0 blur transition-opacity group-hover:opacity-50 group-active:opacity-100"></div>
-                        <a href="#" class="relative mt-5 grid grid-flow-col gap-4 rounded-lg bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-4 py-2">
+                        <a href="https://github.com/pizzaboxer/bloxstrap/releases/download/v@(Model.Version)/Bloxstrap-v@(Model.Version).exe" class="relative mt-5 grid grid-flow-col gap-4 rounded-lg bg-gradient-to-r from-fuchsia-600 to-indigo-600 px-4 py-2">
                             <div>
                                 <i class="fa-solid fa-arrow-down text-4xl"></i>
                             </div>
                             <div class="text-left font-semibold">
                                 <p class="text-lg leading-snug">Download latest version</p>
-                                <p class="mb-1 text-xs leading-snug">Version 2.7.0 &bull; 10 MB</p>
+                                <p class="mb-1 text-xs leading-snug">Version @(Model.Version) &bull; @(Model.ReleaseSizeMB) MB</p>
                             </div>
                         </a>
                     </div>
                     <div class="mb-8 content-center">
                         <p><a href="https://winstall.app/apps/pizzaboxer.Bloxstrap" class="hover:underline">Install with Winget</a> &bull; <a href="https://github.com/pizzaboxer/bloxstrap/releases/latest" class="hover:underline">Release notes</a> &bull; <a href="https://github.com/pizzaboxer/bloxstrap/tags" class="hover:underline">Previous versions</a></p>
-                        <p><a href="#" class="hover:underline">GitHub repository</a> &bull; <a href="#" class="hover:underline">1,400+ stars</a></p>
+                        <p><a href="https://github.com/pizzaboxer/bloxstrap" class="hover:underline">GitHub repository</a> &bull; <a href="https://github.com/pizzaboxer/bloxstrap/stargazers" class="hover:underline">@(Model.StarCount.ToString("N0")) stars</a></p>
                     </div>
                     <div>
                         <p>Having a problem with something? <a href="https://github.com/pizzaboxer/bloxstrap/wiki" class="font-semibold text-purple-400 hover:text-purple-500 transition-colors">See the Wiki <i class="fa-solid fa-arrow-right"></i></a></p>

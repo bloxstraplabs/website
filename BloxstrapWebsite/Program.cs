@@ -1,3 +1,5 @@
+using BloxstrapWebsite.Models.Configuration;
+
 namespace BloxstrapWebsite
 {
     public class Program
@@ -5,6 +7,8 @@ namespace BloxstrapWebsite
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            builder.Services.Configure<Credentials>(builder.Configuration.GetSection("Credentials"));
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
