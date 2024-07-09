@@ -6,6 +6,6 @@
 
         public double ReleaseSizeMB { get; set; }
 
-        public string Version { get; set; }
+        public string Version { get; set; } = "";
     }
 }

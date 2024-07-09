@@ -10,7 +10,7 @@ namespace BloxstrapWebsite
 
         public static int ReleaseSizeMB { get; private set; }
 
-        public static string Version { get; private set; }
+        public static string Version { get; private set; } = "";
 
         public static async Task Update()
         {
