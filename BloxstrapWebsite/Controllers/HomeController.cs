@@ -1,7 +1,6 @@
 using BloxstrapWebsite.Models;
 using BloxstrapWebsite.Models.Configuration;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using System.Diagnostics;
 
@@ -11,19 +10,25 @@ namespace BloxstrapWebsite.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly Credentials _credentials;
+        private readonly IStatsService _statsService;
 
-        public HomeController(ILogger<HomeController> logger, IOptions<Credentials> credentials)
+        public HomeController(ILogger<HomeController> logger, IOptions<Credentials> credentials, IStatsService statsService)
         {
             _logger = logger;
             _credentials = credentials.Value;
+            _statsService = statsService;
         }
 
         public async Task<IActionResult> Index()
         {
-            if (!Stats.Loaded)
-                await Stats.Update();
+            if (!_statsService.Loaded)
+                await _statsService.Update();
 
-            return View(new IndexViewModel { StarCount = Stats.StarCount, Version = Stats.Version, ReleaseSizeMB = Stats.ReleaseSizeMB });
+            return View(new IndexViewModel { 
+                StarCount = _statsService.StarCount, 
+                Version = _statsService.Version, 
+                ReleaseSizeMB = _statsService.ReleaseSizeMB 
+            });
         }
 
         public async Task<IActionResult> UpdateStats(string key)
@@ -31,7 +36,7 @@ namespace BloxstrapWebsite.Controllers
             if (key != _credentials.StatsKey)
                 return Unauthorized();
 
-            await Stats.Update();
+            await _statsService.Update();
 
             return Ok();
         }

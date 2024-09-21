@@ -11,6 +11,8 @@ namespace BloxstrapWebsite
 
             builder.Services.Configure<Credentials>(builder.Configuration.GetSection("Credentials"));
 
+            builder.Services.AddSingleton<IStatsService, StatsService>();
+
             builder.Services.AddScheduler();
             builder.Services.AddTransient<StatsJobInvocable>();
 

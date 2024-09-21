@@ -2,17 +2,17 @@
 
 namespace BloxstrapWebsite
 {
-    public static class Stats
+    public class StatsService : IStatsService
     {
-        public static bool Loaded { get; private set; } = false;
+        public bool Loaded { get; private set; } = false;
 
-        public static int StarCount { get; private set; }
+        public int StarCount { get; private set; }
 
-        public static int ReleaseSizeMB { get; private set; }
+        public int ReleaseSizeMB { get; private set; }
 
-        public static string Version { get; private set; } = "";
+        public string Version { get; private set; } = "";
 
-        public static async Task Update()
+        public async Task Update()
         {
             using var httpClient = new HttpClient();
             httpClient.DefaultRequestHeaders.Add("User-Agent", "bloxstraplabs/website");
@@ -20,8 +20,8 @@ namespace BloxstrapWebsite
             var repoData = await httpClient.GetFromJsonAsync<RepoData>("https://api.github.com/repos/pizzaboxer/bloxstrap");
             var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/pizzaboxer/bloxstrap/releases/latest");
             
-            StarCount = repoData.StargazersCount;
-            Version = releaseData.TagName.Substring(1);
+            StarCount = repoData!.StargazersCount;
+            Version = releaseData!.TagName.Substring(1);
             ReleaseSizeMB = releaseData.Assets.ToArray()[0].Size / (1024 * 1024);
 
             Loaded = true;
