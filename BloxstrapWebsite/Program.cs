@@ -1,4 +1,5 @@
 using BloxstrapWebsite.Models.Configuration;
+using Coravel;
 
 namespace BloxstrapWebsite
 {
@@ -10,10 +11,15 @@ namespace BloxstrapWebsite
 
             builder.Services.Configure<Credentials>(builder.Configuration.GetSection("Credentials"));
 
+            builder.Services.AddScheduler();
+            builder.Services.AddTransient<StatsJobInvocable>();
+
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
+
+            app.Services.UseScheduler(scheduler => scheduler.Schedule<StatsJobInvocable>().Hourly());
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())
