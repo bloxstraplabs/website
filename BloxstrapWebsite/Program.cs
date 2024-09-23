@@ -1,4 +1,5 @@
 using BloxstrapWebsite.Models.Configuration;
+using BloxstrapWebsite.Services;
 using Coravel;
 
 namespace BloxstrapWebsite

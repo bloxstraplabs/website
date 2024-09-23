@@ -1,6 +1,6 @@
 ﻿using BloxstrapWebsite.Models.GitHubApi;
 
-namespace BloxstrapWebsite
+namespace BloxstrapWebsite.Services
 {
     public class StatsService : IStatsService
     {
@@ -19,7 +19,7 @@ namespace BloxstrapWebsite
 
             var repoData = await httpClient.GetFromJsonAsync<RepoData>("https://api.github.com/repos/pizzaboxer/bloxstrap");
             var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/pizzaboxer/bloxstrap/releases/latest");
-            
+
             StarCount = repoData!.StargazersCount;
             Version = releaseData!.TagName.Substring(1);
             ReleaseSizeMB = releaseData.Assets.ToArray()[0].Size / (1024 * 1024);

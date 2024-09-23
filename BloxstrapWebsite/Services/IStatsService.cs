@@ -1,4 +1,4 @@
-﻿namespace BloxstrapWebsite
+﻿namespace BloxstrapWebsite.Services
 {
     public interface IStatsService
     {
