@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Writes;
-using RestSharp;
 
 namespace BloxstrapWebsite.Controllers
 {
@@ -17,17 +16,23 @@ namespace BloxstrapWebsite.Controllers
 
         private readonly IMemoryCache _memoryCache;
 
+        private readonly Dictionary<string, List<string>> _statPoints = new()
+        {
+            { "packageDownloadState", new() { "httpSuccess", "httpFail", "retrySuccess" } }
+        };
+
         public MetricsController(IOptions<Credentials> credentials, IMemoryCache memoryCache)
         {
             _credentials = credentials.Value;
             _memoryCache = memoryCache;
         }
 
-        public IActionResult Post(string key, bool value)
+        public IActionResult Post(string key, string value)
         {
-            if (key != "httpDownloadSuccess")
+            if (!_statPoints.TryGetValue(key, out List<string>? values) || values is null || !values.Contains(value))
                 return BadRequest();
 
+#if !DEBUG
             var requestIp = Request.HttpContext.Connection.RemoteIpAddress;
 
             if (requestIp is null)
@@ -39,6 +44,7 @@ namespace BloxstrapWebsite.Controllers
                 return StatusCode(429);
             
             _memoryCache.Set(cacheKey, DateTime.Now, DateTime.Now.AddMinutes(1));
+#endif
 
             string? token = _credentials.InfluxDBToken;
 
@@ -48,7 +54,7 @@ namespace BloxstrapWebsite.Controllers
             if (String.IsNullOrEmpty(token))
                 throw new InvalidOperationException();
 
-            using var client = new InfluxDBClient("https://influxdb.internal.pizzaboxer.xyz", _credentials.InfluxDBToken);
+            using var client = new InfluxDBClient("https://influxdb.internal.pizzaboxer.xyz", token);
 
             using var writeApi = client.GetWriteApi();
 
