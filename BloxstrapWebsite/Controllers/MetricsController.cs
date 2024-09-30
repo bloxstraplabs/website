@@ -1,4 +1,5 @@
-﻿using BloxstrapWebsite.Models.Configuration;
+﻿using BloxstrapWebsite.Models;
+using BloxstrapWebsite.Models.Configuration;
 using BloxstrapWebsite.Services;
 
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +10,11 @@ using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Writes;
 
+using System.Text.RegularExpressions;
+
 namespace BloxstrapWebsite.Controllers
 {
-    public class MetricsController : Controller
+    public partial class MetricsController : Controller
     {
         private readonly Credentials _credentials;
 
@@ -19,10 +22,22 @@ namespace BloxstrapWebsite.Controllers
 
         private readonly IStatsService _statsService;
 
-        private readonly Dictionary<string, List<string>> _statPoints = new()
+        private readonly Dictionary<string, StatPoint> _statPoints = new()
         {
-            { "packageDownloadState", new() { "httpSuccess", "httpFail", "retrySuccess" } }
+            { 
+                "packageDownloadState", new StatPoint 
+                { 
+                    Values = ["httpSuccess", "httpFail", "retrySuccess"],
+                    ProductionOnly = false
+                } 
+            },
         };
+
+        private readonly List<string> _uaTypes = ["Production", "Artifact", "Build"];
+
+
+        [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((.*)\)")]
+        private static partial Regex UARegex();
 
         public MetricsController(IOptions<Credentials> credentials, IMemoryCache memoryCache, IStatsService statsService)
         {
@@ -43,17 +58,22 @@ namespace BloxstrapWebsite.Controllers
                 return BadRequest();
 
             string? ua = uaHeader.First();
-
-            if (ua is null || !ua.StartsWith("pizzaboxer/bloxstrap"))
+            
+            if (ua is null)
                 return BadRequest();
 
-            var parts = ua.Split("/");
+            var match = UARegex().Match(ua);
 
-            if (parts.Length != 3 || !Version.TryParse(parts[2], out var version) || version > _statsService.Version)
+            if (!match.Success || !Version.TryParse(match.Groups[1].Value, out var version) || version > _statsService.Version)
                 return BadRequest();
 
             // validate stats key/value
-            if (!_statPoints.TryGetValue(key, out List<string>? values) || values is null || !values.Contains(value))
+            if (!_statPoints.TryGetValue(key, out var statPoint) || statPoint is null || !statPoint.Values.Contains(value))
+                return BadRequest();
+
+            string info = match.Groups[2].Value;
+
+            if (statPoint.ProductionOnly && info != "Production" || !_uaTypes.Any(info.StartsWith))
                 return BadRequest();
 
             // ratelimit
@@ -82,7 +102,7 @@ namespace BloxstrapWebsite.Controllers
 
             var point = PointData.Measurement("metrics")
                     .Field(key, value)
-                    .Tag("version", version.ToString())
+                    .Tag("version", ua)
                     .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
 
             writeApi.WritePoint(point, "bloxstrap", "pizza-server");
