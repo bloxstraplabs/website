@@ -8,7 +8,7 @@
 
         int ReleaseSizeMB { get; }
 
-        string Version { get; }
+        Version Version { get; }
 
         Task Update();
     }

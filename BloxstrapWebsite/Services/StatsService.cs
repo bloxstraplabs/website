@@ -10,7 +10,7 @@ namespace BloxstrapWebsite.Services
 
         public int ReleaseSizeMB { get; private set; }
 
-        public string Version { get; private set; } = "";
+        public Version Version { get; private set; } = null!;
 
         public async Task Update()
         {
@@ -21,7 +21,7 @@ namespace BloxstrapWebsite.Services
             var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/pizzaboxer/bloxstrap/releases/latest");
 
             StarCount = repoData!.StargazersCount;
-            Version = releaseData!.TagName.Substring(1);
+            Version = new Version(releaseData!.TagName.Substring(1));
             ReleaseSizeMB = releaseData.Assets.ToArray()[0].Size / (1024 * 1024);
 
             Loaded = true;
