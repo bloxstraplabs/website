@@ -22,16 +22,32 @@ namespace BloxstrapWebsite.Controllers
 
         private readonly IStatsService _statsService;
 
-        private readonly Dictionary<string, StatPoint> _statPoints = new()
-        {
+        private readonly List<StatPoint> _statPoints = 
+        [
+            new StatPoint 
             { 
-                "packageDownloadState", new StatPoint 
-                { 
-                    Values = ["httpSuccess", "httpFail", "retrySuccess"],
-                    ProductionOnly = false
-                } 
+                Name = "packageDownloadState",
+                Values = ["httpSuccess", "httpFail", "retrySuccess"],
+                ProductionOnly = false,
+                RatelimitInterval = 60,
+                RatelimitCount = 18
             },
-        };
+
+            new StatPoint
+            {
+                Name = "installAction",
+                Values = ["install", "upgrade", "uninstall"],
+                ProductionOnly = false,
+                RatelimitInterval = 3600
+            },
+
+            new StatPoint
+            {
+                Name = "robloxChannel",
+                ProductionOnly = false,
+                RatelimitInterval = 3600
+            }
+        ];
 
         private readonly List<string> _uaTypes = ["Production", "Artifact", "Build"];
 
@@ -48,7 +64,7 @@ namespace BloxstrapWebsite.Controllers
 
         public IActionResult Post(string? key, string? value)
         {
-            if (key is null || value is null)
+            if (String.IsNullOrEmpty(key) || String.IsNullOrEmpty(value))
                 return BadRequest();
 
             // validate user agent and record version
@@ -67,14 +83,24 @@ namespace BloxstrapWebsite.Controllers
             if (!match.Success || !Version.TryParse(match.Groups[1].Value, out var version) || version > _statsService.Version)
                 return BadRequest();
 
+            var statPoint = _statPoints.Find(x => x.Name == key);
+
             // validate stats key/value
-            if (!_statPoints.TryGetValue(key, out var statPoint) || statPoint is null || !statPoint.Values.Contains(value))
+            if (statPoint is null || statPoint.Values is not null && !statPoint.Values.Contains(value))
                 return BadRequest();
 
             string info = match.Groups[2].Value;
 
             if (statPoint.ProductionOnly && info != "Production" || !_uaTypes.Any(info.StartsWith))
                 return BadRequest();
+
+            if (statPoint.Name == "robloxChannel")
+            {
+                value = value.ToLowerInvariant();
+
+                if (value[0] != 'z')
+                    return BadRequest();
+            }
 
             // ratelimit
 #if !DEBUG
@@ -85,10 +111,15 @@ namespace BloxstrapWebsite.Controllers
 
             string cacheKey = $"ratelimit-metrics-{key}-{requestIp}";
 
-            if (_memoryCache.TryGetValue(cacheKey, out _))
+            _memoryCache.TryGetValue(cacheKey, out int count);
+
+            if (count >= statPoint.RatelimitCount)
                 return StatusCode(429);
             
-            _memoryCache.Set(cacheKey, DateTime.Now, DateTime.Now.AddMinutes(1));
+            if (count == 0)
+                _memoryCache.Set(cacheKey, ++count, DateTime.Now.AddSeconds(statPoint.RatelimitInterval));
+            else
+                _memoryCache.Set(cacheKey, ++count);
 #endif
 
             string? token = _credentials.InfluxDBToken;

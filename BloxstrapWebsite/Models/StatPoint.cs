@@ -2,8 +2,17 @@
 {
     public class StatPoint
     {
-        public List<string> Values { get; set; } = null!;
+        public required string Name { get; set; }
 
-        public bool ProductionOnly { get; set; }
+        public List<string>? Values { get; set; }
+
+        public required bool ProductionOnly { get; set; }
+
+        /// <summary>
+        /// Provided in seconds
+        /// </summary>
+        public required int RatelimitInterval { get; set; }
+
+        public int RatelimitCount { get; set; } = 1;
     }
 }
