@@ -1,7 +1,8 @@
-using Microsoft.AspNetCore.HttpOverrides;
 using BloxstrapWebsite.Models.Configuration;
 using BloxstrapWebsite.Services;
 using Coravel;
+using InfluxDB.Client;
+using Microsoft.AspNetCore.HttpOverrides;
 
 namespace BloxstrapWebsite
 {
@@ -21,6 +22,15 @@ namespace BloxstrapWebsite
             });
 
             builder.Services.AddSingleton<IStatsService, StatsService>();
+            builder.Services.AddSingleton<IInfluxDBClient, InfluxDBClient>(x =>
+            {
+                var options = new InfluxDBClientOptions("https://influxdb.internal.pizzaboxer.xyz")
+                {
+                    Token = builder.Configuration["Credentials:InfluxDBToken"]
+                };
+
+                return new InfluxDBClient(options);
+            });
 
             builder.Services.AddScheduler();
             builder.Services.AddTransient<StatsJobInvocable>();

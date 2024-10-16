@@ -16,7 +16,7 @@ namespace BloxstrapWebsite.Controllers
 {
     public partial class MetricsController : Controller
     {
-        private readonly Credentials _credentials;
+        private readonly IInfluxDBClient _influxDBClient;
 
         private readonly IMemoryCache _memoryCache;
 
@@ -55,9 +55,9 @@ namespace BloxstrapWebsite.Controllers
         [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((.*)\)")]
         private static partial Regex UARegex();
 
-        public MetricsController(IOptions<Credentials> credentials, IMemoryCache memoryCache, IStatsService statsService)
+        public MetricsController(IInfluxDBClient influxDBClient, IMemoryCache memoryCache, IStatsService statsService)
         {
-            _credentials = credentials.Value;
+            _influxDBClient = influxDBClient;
             _memoryCache = memoryCache;
             _statsService = statsService;
         }
@@ -122,14 +122,7 @@ namespace BloxstrapWebsite.Controllers
                 _memoryCache.Set(cacheKey, ++count);
 #endif
 
-            string? token = _credentials.InfluxDBToken;
-
-            if (String.IsNullOrEmpty(token))
-                throw new InvalidOperationException();
-
-            using var client = new InfluxDBClient("https://influxdb.internal.pizzaboxer.xyz", token);
-
-            using var writeApi = client.GetWriteApi();
+            using var writeApi = _influxDBClient.GetWriteApi();
 
             var point = PointData.Measurement("metrics")
                     .Field(key, value)
