@@ -62,7 +62,7 @@ namespace BloxstrapWebsite.Controllers
             _statsService = statsService;
         }
 
-        public IActionResult Post(string? key, string? value)
+        public async Task<IActionResult> Post(string? key, string? value)
         {
             if (String.IsNullOrEmpty(key) || String.IsNullOrEmpty(value))
                 return BadRequest();
@@ -122,14 +122,12 @@ namespace BloxstrapWebsite.Controllers
                 _memoryCache.Set(cacheKey, ++count);
 #endif
 
-            using var writeApi = _influxDBClient.GetWriteApi();
-
             var point = PointData.Measurement("metrics")
                     .Field(key, value)
                     .Tag("version", ua)
                     .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
 
-            writeApi.WritePoint(point, "bloxstrap", "pizza-server");
+            await _influxDBClient.GetWriteApiAsync().WritePointAsync(point, "bloxstrap", "pizza-server");
 
             return Ok();
         }
