@@ -1,10 +1,9 @@
-﻿using BloxstrapWebsite.Models;
-using BloxstrapWebsite.Models.Configuration;
+﻿using BloxstrapWebsite.Enums;
+using BloxstrapWebsite.Models;
 using BloxstrapWebsite.Services;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 
 using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
@@ -38,7 +37,8 @@ namespace BloxstrapWebsite.Controllers
                 Name = "installAction",
                 Values = ["install", "upgrade", "uninstall"],
                 ProductionOnly = false,
-                RatelimitInterval = 3600
+                RatelimitInterval = 3600,
+                RatelimitType = RatelimitType.KeyValue
             },
 
             new StatPoint
@@ -50,7 +50,6 @@ namespace BloxstrapWebsite.Controllers
         ];
 
         private readonly List<string> _uaTypes = ["Production", "Artifact", "Build"];
-
 
         [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((.*)\)")]
         private static partial Regex UARegex();
@@ -110,6 +109,9 @@ namespace BloxstrapWebsite.Controllers
                 return StatusCode(500);
 
             string cacheKey = $"ratelimit-metrics-{key}-{requestIp}";
+
+            if (statPoint.RatelimitType == RatelimitType.KeyValue)
+                cacheKey += $"-{value}";
 
             _memoryCache.TryGetValue(cacheKey, out int count);
 
