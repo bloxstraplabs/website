@@ -10,6 +10,8 @@ namespace BloxstrapWebsite.Models
 
         public required bool ProductionOnly { get; set; }
 
+        public string Bucket { get; set; } = "bloxstrap";
+
         /// <summary>
         /// Provided in seconds
         /// </summary>

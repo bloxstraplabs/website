@@ -35,6 +35,11 @@ namespace BloxstrapWebsite
             builder.Services.AddScheduler();
             builder.Services.AddTransient<StatsJobInvocable>();
 
+            builder.Services.AddHttpClient("Global", client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "bloxstraplabs/website");
+            });
+
             // Add services to the container.
             builder.Services.AddControllersWithViews();
 

@@ -12,10 +12,16 @@ namespace BloxstrapWebsite.Services
 
         public Version Version { get; private set; } = null!;
 
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        public StatsService(IHttpClientFactory httpClientFactory)
+        {
+            _httpClientFactory = httpClientFactory;
+        }
+
         public async Task Update()
         {
-            using var httpClient = new HttpClient();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "bloxstraplabs/website");
+            var httpClient = _httpClientFactory.CreateClient("Global");
 
             var repoData = await httpClient.GetFromJsonAsync<RepoData>("https://api.github.com/repos/pizzaboxer/bloxstrap");
             var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/pizzaboxer/bloxstrap/releases/latest");

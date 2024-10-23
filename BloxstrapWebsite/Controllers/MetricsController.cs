@@ -9,6 +9,7 @@ using InfluxDB.Client;
 using InfluxDB.Client.Api.Domain;
 using InfluxDB.Client.Writes;
 
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace BloxstrapWebsite.Controllers
@@ -20,6 +21,8 @@ namespace BloxstrapWebsite.Controllers
         private readonly IMemoryCache _memoryCache;
 
         private readonly IStatsService _statsService;
+
+        private readonly IHttpClientFactory _httpClientFactory;
 
         private readonly List<StatPoint> _statPoints = 
         [
@@ -45,6 +48,7 @@ namespace BloxstrapWebsite.Controllers
             {
                 Name = "robloxChannel",
                 ProductionOnly = false,
+                Bucket = "bloxstrap-eph-7d",
                 RatelimitInterval = 3600
             }
         ];
@@ -54,11 +58,13 @@ namespace BloxstrapWebsite.Controllers
         [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((.*)\)")]
         private static partial Regex UARegex();
 
-        public MetricsController(IInfluxDBClient influxDBClient, IMemoryCache memoryCache, IStatsService statsService)
+        public MetricsController(IInfluxDBClient influxDBClient, IMemoryCache memoryCache, 
+            IStatsService statsService, IHttpClientFactory httpClientFactory)
         {
             _influxDBClient = influxDBClient;
             _memoryCache = memoryCache;
             _statsService = statsService;
+            _httpClientFactory = httpClientFactory;
         }
 
         public async Task<IActionResult> Post(string? key, string? value)
@@ -124,12 +130,31 @@ namespace BloxstrapWebsite.Controllers
                 _memoryCache.Set(cacheKey, ++count);
 #endif
 
+            if (statPoint.Name == "robloxChannel")
+            {
+                string validationCacheKey = $"validation-channel-{value}";
+
+                if (!_memoryCache.TryGetValue(validationCacheKey, out bool exists))
+                {
+                    var httpClient = _httpClientFactory.CreateClient("Global");
+
+                    var response = await httpClient.GetFromJsonAsync<JsonDocument>($"https://clientsettings.roblox.com/v2/settings/application/PCClientBootstrapper/bucket/{value}");
+                    
+                    exists = response!.RootElement.GetProperty("applicationSettings").ValueKind != JsonValueKind.Null;
+
+                    _memoryCache.Set(validationCacheKey, exists, DateTime.Now.AddDays(1));
+                }
+
+                if (!exists)
+                    return BadRequest();
+            }
+
             var point = PointData.Measurement("metrics")
                     .Field(key, value)
                     .Tag("version", ua)
                     .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
 
-            await _influxDBClient.GetWriteApiAsync().WritePointAsync(point, "bloxstrap", "pizza-server");
+            await _influxDBClient.GetWriteApiAsync().WritePointAsync(point, statPoint.Bucket, "pizza-server");
 
             return Ok();
         }
