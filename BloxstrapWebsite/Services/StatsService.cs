@@ -21,10 +21,10 @@ namespace BloxstrapWebsite.Services
 
         public async Task Update()
         {
-            var httpClient = _httpClientFactory.CreateClient("Global");
+            var httpClient = _httpClientFactory.CreateClient("GitHub");
 
-            var repoData = await httpClient.GetFromJsonAsync<RepoData>("https://api.github.com/repos/pizzaboxer/bloxstrap");
-            var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/pizzaboxer/bloxstrap/releases/latest");
+            var repoData = await httpClient.GetFromJsonAsync<RepoData>("https://api.github.com/repos/bloxstraplabs/bloxstrap");
+            var releaseData = await httpClient.GetFromJsonAsync<Release>("https://api.github.com/repos/bloxstraplabs/bloxstrap/releases/latest");
 
             StarCount = repoData!.StargazersCount;
             Version = new Version(releaseData!.TagName.Substring(1));

@@ -5,9 +5,9 @@ namespace BloxstrapWebsite.Models.GitHubApi
     public class Release
     {
         [JsonPropertyName("tag_name")]
-        public string TagName { get; set; }
+        public required string TagName { get; set; }
 
         [JsonPropertyName("assets")]
-        public IEnumerable<ReleaseAsset> Assets { get; set; }
+        public required IEnumerable<ReleaseAsset> Assets { get; set; }
     }
 }

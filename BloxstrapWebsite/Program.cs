@@ -1,5 +1,8 @@
+using System.Net.Http.Headers;
+
 using BloxstrapWebsite.Data;
 using BloxstrapWebsite.Services;
+
 using Coravel;
 using InfluxDB.Client;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -39,6 +42,14 @@ namespace BloxstrapWebsite
             builder.Services.AddHttpClient("Global", client =>
             {
                 client.DefaultRequestHeaders.Add("User-Agent", "bloxstraplabs/website");
+            });
+
+            builder.Services.AddHttpClient("GitHub", client =>
+            {
+                client.DefaultRequestHeaders.Add("User-Agent", "bloxstraplabs/website");
+                client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+                    "Bearer", builder.Configuration["Credentials:GitHubToken"]
+                );
             });
 
             // Add services to the container.
