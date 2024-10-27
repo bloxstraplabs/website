@@ -1,4 +1,6 @@
-﻿using BloxstrapWebsite.Enums;
+﻿using BloxstrapWebsite.Data;
+using BloxstrapWebsite.Data.Entities;
+using BloxstrapWebsite.Enums;
 using BloxstrapWebsite.Models;
 using BloxstrapWebsite.Services;
 
@@ -17,12 +19,10 @@ namespace BloxstrapWebsite.Controllers
     public partial class MetricsController : Controller
     {
         private readonly IInfluxDBClient _influxDBClient;
-
         private readonly IMemoryCache _memoryCache;
-
-        private readonly IStatsService _statsService;
-
         private readonly IHttpClientFactory _httpClientFactory;
+        private readonly ApplicationDbContext _dbContext;
+        private readonly ILogger<MetricsController> _logger;
 
         private readonly List<StatPoint> _statPoints = 
         [
@@ -59,12 +59,14 @@ namespace BloxstrapWebsite.Controllers
         private static partial Regex UARegex();
 
         public MetricsController(IInfluxDBClient influxDBClient, IMemoryCache memoryCache, 
-            IStatsService statsService, IHttpClientFactory httpClientFactory)
+            IHttpClientFactory httpClientFactory, ApplicationDbContext dbContext,
+            ILogger<MetricsController> logger)
         {
             _influxDBClient = influxDBClient;
             _memoryCache = memoryCache;
-            _statsService = statsService;
             _httpClientFactory = httpClientFactory;
+            _dbContext = dbContext;
+            _logger = logger;
         }
 
         public async Task<IActionResult> Post(string? key, string? value)
@@ -72,20 +74,9 @@ namespace BloxstrapWebsite.Controllers
             if (String.IsNullOrEmpty(key) || String.IsNullOrEmpty(value))
                 return BadRequest();
 
-            // validate user agent and record version
-            Request.Headers.TryGetValue("User-Agent", out var uaHeader);
+            var uaDetails = ValidateUA();
 
-            if (uaHeader.Count == 0)
-                return BadRequest();
-
-            string? ua = uaHeader.First();
-            
-            if (ua is null)
-                return BadRequest();
-
-            var match = UARegex().Match(ua);
-
-            if (!match.Success || !Version.TryParse(match.Groups[1].Value, out var version) || version > _statsService.Version)
+            if (uaDetails is null)
                 return BadRequest();
 
             var statPoint = _statPoints.Find(x => x.Name == key);
@@ -94,7 +85,7 @@ namespace BloxstrapWebsite.Controllers
             if (statPoint is null || statPoint.Values is not null && !statPoint.Values.Contains(value))
                 return BadRequest();
 
-            string info = match.Groups[2].Value;
+            string info = uaDetails.Groups[2].Value;
 
             if (statPoint.ProductionOnly && info != "Production" || !_uaTypes.Any(info.StartsWith))
                 return BadRequest();
@@ -151,12 +142,84 @@ namespace BloxstrapWebsite.Controllers
 
             var point = PointData.Measurement("metrics")
                     .Field(key, value)
-                    .Tag("version", ua)
+                    .Tag("version", uaDetails.Value)
                     .Timestamp(DateTime.UtcNow, WritePrecision.Ns);
 
             await _influxDBClient.GetWriteApiAsync().WritePointAsync(point, statPoint.Bucket, "pizza-server");
 
             return Ok();
+        }
+
+        [HttpPost]
+        [ActionName("post-exception")]
+        public async Task<IActionResult> PostException()
+        {
+            if (ValidateUA() is null)
+                return BadRequest();
+
+            using var sr = new StreamReader(Request.Body);
+
+            string trace = await sr.ReadToEndAsync();
+
+            if (String.IsNullOrEmpty(trace))
+                return BadRequest();
+
+            if (trace.Length >= 1024 * 50)
+            {
+                _logger.LogInformation("Exception post dropped because it was too big ({Bytes} bytes)", trace.Length);
+                return BadRequest();
+            }
+
+            // ratelimit
+#if !DEBUG
+            var requestIp = Request.HttpContext.Connection.RemoteIpAddress;
+
+            if (requestIp is null)
+                return StatusCode(500);
+
+            string cacheKey = $"ratelimit-metrics-exception-{requestIp}";
+
+            _memoryCache.TryGetValue(cacheKey, out int count);
+
+            if (count >= 1)
+                return StatusCode(429);
+            
+            if (count == 0)
+                _memoryCache.Set(cacheKey, ++count, DateTime.Now.AddHours(1));
+            else
+                _memoryCache.Set(cacheKey, ++count);
+#endif
+
+            await _dbContext.ExceptionReports.AddAsync(new ExceptionReport
+            {
+                Timestamp = DateTime.UtcNow,
+                Trace = trace
+            });
+
+            await _dbContext.SaveChangesAsync();
+
+            return Ok();
+        }
+
+        private Match? ValidateUA()
+        {
+            // validate user agent and record version
+            Request.Headers.TryGetValue("User-Agent", out var uaHeader);
+
+            if (uaHeader.Count == 0)
+                return null;
+
+            string? ua = uaHeader.First();
+
+            if (ua is null)
+                return null;
+
+            var match = UARegex().Match(ua);
+
+            if (!match.Success)
+                return null;
+
+            return match;
         }
     }
 }

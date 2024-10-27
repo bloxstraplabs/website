@@ -1,4 +1,4 @@
-using BloxstrapWebsite.Models.Configuration;
+using BloxstrapWebsite.Data;
 using BloxstrapWebsite.Services;
 using Coravel;
 using InfluxDB.Client;
@@ -12,7 +12,6 @@ namespace BloxstrapWebsite
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            builder.Services.Configure<Credentials>(builder.Configuration.GetSection("Credentials"));
             builder.Services.Configure<ForwardedHeadersOptions>(options =>
             {
                 options.ForwardedHeaders =
@@ -34,6 +33,8 @@ namespace BloxstrapWebsite
 
             builder.Services.AddScheduler();
             builder.Services.AddTransient<StatsJobInvocable>();
+
+            builder.Services.AddDbContext<ApplicationDbContext>();
 
             builder.Services.AddHttpClient("Global", client =>
             {

@@ -398,3 +398,6 @@ FodyWeavers.xsd
 *.sln.iml
 
 BloxstrapWebsite/wwwroot/css/site.css
+
+BloxstrapWebsite/appsettings.json
+BloxstrapWebsite/appsettings.Development.json

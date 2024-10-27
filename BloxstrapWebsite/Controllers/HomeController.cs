@@ -1,5 +1,4 @@
 using BloxstrapWebsite.Models;
-using BloxstrapWebsite.Models.Configuration;
 using BloxstrapWebsite.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -9,14 +8,12 @@ namespace BloxstrapWebsite.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
-        private readonly Credentials _credentials;
+        private readonly IConfiguration _configuration;
         private readonly IStatsService _statsService;
 
-        public HomeController(ILogger<HomeController> logger, IOptions<Credentials> credentials, IStatsService statsService)
+        public HomeController(IConfiguration configuration, IStatsService statsService)
         {
-            _logger = logger;
-            _credentials = credentials.Value;
+            _configuration = configuration;
             _statsService = statsService;
         }
 
@@ -34,7 +31,7 @@ namespace BloxstrapWebsite.Controllers
 
         public async Task<IActionResult> UpdateStats(string key)
         {
-            if (key != _credentials.StatsKey)
+            if (key != _configuration["Credentials:StatsKey"])
                 return Unauthorized();
 
             await _statsService.Update();

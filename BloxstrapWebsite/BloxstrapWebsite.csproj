@@ -13,7 +13,9 @@
 
   <ItemGroup>
     <PackageReference Include="Coravel" Version="5.0.4" />
+    <PackageReference Include="EFCore.NamingConventions" Version="8.0.3" />
     <PackageReference Include="InfluxDB.Client" Version="4.18.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.10" />
   </ItemGroup>
 
   <Target Name="Tailwind" BeforeTargets="Build">
