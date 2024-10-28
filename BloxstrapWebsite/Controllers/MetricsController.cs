@@ -1,8 +1,6 @@
 ﻿using BloxstrapWebsite.Data;
-using BloxstrapWebsite.Data.Entities;
 using BloxstrapWebsite.Enums;
 using BloxstrapWebsite.Models;
-using BloxstrapWebsite.Services;
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Caching.Memory;
@@ -26,15 +24,6 @@ namespace BloxstrapWebsite.Controllers
 
         private readonly List<StatPoint> _statPoints = 
         [
-            new StatPoint 
-            { 
-                Name = "packageDownloadState",
-                Values = ["httpSuccess", "httpFail", "retrySuccess"],
-                ProductionOnly = false,
-                RatelimitInterval = 60,
-                RatelimitCount = 18
-            },
-
             new StatPoint
             {
                 Name = "installAction",
@@ -55,7 +44,7 @@ namespace BloxstrapWebsite.Controllers
 
         private readonly List<string> _uaTypes = ["Production", "Artifact", "Build"];
 
-        [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((.*)\)")]
+        [GeneratedRegex(@"Bloxstrap\/([0-9\.]+) \((Production|Build [a-zA-Z0-9=+\/]+|Artifact [0-9a-f]{40}, [a-zA-Z0-9\/\-]+)\)")]
         private static partial Regex UARegex();
 
         public MetricsController(IInfluxDBClient influxDBClient, IMemoryCache memoryCache, 
@@ -87,7 +76,7 @@ namespace BloxstrapWebsite.Controllers
 
             string info = uaDetails.Groups[2].Value;
 
-            if (statPoint.ProductionOnly && info != "Production" || !_uaTypes.Any(info.StartsWith))
+            if (statPoint.ProductionOnly && info != "Production")
                 return BadRequest();
 
             if (statPoint.Name == "robloxChannel")
@@ -190,7 +179,7 @@ namespace BloxstrapWebsite.Controllers
                 _memoryCache.Set(cacheKey, ++count);
 #endif
 
-            await _dbContext.ExceptionReports.AddAsync(new ExceptionReport
+            await _dbContext.ExceptionReports.AddAsync(new()
             {
                 Timestamp = DateTime.UtcNow,
                 Trace = trace
@@ -217,6 +206,11 @@ namespace BloxstrapWebsite.Controllers
             var match = UARegex().Match(ua);
 
             if (!match.Success)
+                return null;
+
+            string info = match.Groups[2].Value;
+
+            if (!_uaTypes.Any(info.StartsWith) || info.Length > 128)
                 return null;
 
             return match;
